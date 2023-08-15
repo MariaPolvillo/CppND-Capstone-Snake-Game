@@ -1,6 +1,7 @@
 #include "renderer.h"
 #include <iostream>
 #include <string>
+#include "game.h"
 
 Renderer::Renderer(const std::size_t screen_width,
                    const std::size_t screen_height,
@@ -38,7 +39,7 @@ Renderer::~Renderer() {
   SDL_Quit();
 }
 
-void Renderer::Render(Snake const snake, SDL_Point const &food) {
+void Renderer::Render(Snake const snake, SDL_Point const &food, const bool borders) {
   SDL_Rect block;
   block.w = screen_width / grid_width;
   block.h = screen_height / grid_height;
@@ -59,7 +60,7 @@ void Renderer::Render(Snake const snake, SDL_Point const &food) {
     block.x = point.x * block.w;
     block.y = point.y * block.h;
     SDL_RenderFillRect(sdl_renderer, &block);
-  }
+  }  
 
   // Render snake's head
   block.x = static_cast<int>(snake.head_x) * block.w;
@@ -71,11 +72,41 @@ void Renderer::Render(Snake const snake, SDL_Point const &food) {
   }
   SDL_RenderFillRect(sdl_renderer, &block);
 
+  // Render borders
+  if (borders) {
+    SDL_SetRenderDrawColor(sdl_renderer, 0xF0, 0x00, 0x00, 0x10);
+    SDL_Rect vertical, horizontal;
+    horizontal.w = 5;
+    horizontal.h = screen_height;
+
+    vertical.w = screen_width;
+    vertical.h = 5;
+
+    // Up
+    horizontal.x = 0;
+    horizontal.y = 0;
+    SDL_RenderFillRect(sdl_renderer, &horizontal);
+
+    // Left
+    vertical.x = 0;
+    vertical.y = 0;
+    SDL_RenderFillRect(sdl_renderer, &vertical);
+
+    // Down
+    horizontal.x = screen_height - 5;
+    horizontal.y = 0;
+    SDL_RenderFillRect(sdl_renderer, &horizontal);
+
+    // Right
+    vertical.x = 0;
+    vertical.y = screen_width - 5;
+    SDL_RenderFillRect(sdl_renderer, &vertical);
+  }
   // Update Screen
   SDL_RenderPresent(sdl_renderer);
 }
 
-void Renderer::UpdateWindowTitle(int score, int fps) {
-  std::string title{"Snake Score: " + std::to_string(score) + " FPS: " + std::to_string(fps)};
+void Renderer::UpdateWindowTitle(int score) {
+  std::string title{"Snake Score: " + std::to_string(score)};
   SDL_SetWindowTitle(sdl_window, title.c_str());
 }

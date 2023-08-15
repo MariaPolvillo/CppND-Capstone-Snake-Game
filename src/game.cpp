@@ -1,31 +1,57 @@
 #include "game.h"
 #include <iostream>
 #include "SDL.h"
+#include <chrono>
 
-Game::Game(std::size_t grid_width, std::size_t grid_height)
-    : snake(grid_width, grid_height),
-      engine(dev()),
+Game::Game(std::size_t grid_width, std::size_t grid_height, Renderer &renderer)
+    : snake(grid_width, grid_height), engine(dev()),
       random_w(0, static_cast<int>(grid_width - 1)),
-      random_h(0, static_cast<int>(grid_height - 1)) {
+      random_h(0, static_cast<int>(grid_height - 1)),
+      gameModeSpawn(static_cast<int>(GameMode::speedUp), static_cast<int>(GameMode::solidBorders)),
+      releaseModeEffect(false), gameModeSpawned(false), renderer(renderer),
+      solidBorders(false)
+      {
   PlaceFood();
 }
 
-void Game::Run(Controller const &controller, Renderer &renderer,
-               std::size_t target_frame_duration) {
+void Game::Run(Controller &controller, std::size_t target_frame_duration) {
   Uint32 title_timestamp = SDL_GetTicks();
   Uint32 frame_start;
   Uint32 frame_end;
   Uint32 frame_duration;
   int frame_count = 0;
   bool running = true;
+  futureGameMode = std::async(std::launch::async, [this]() {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    return setModeGame();
+  });
 
   while (running) {
     frame_start = SDL_GetTicks();
 
     // Input, Update, Render - the main game loop.
     controller.HandleInput(running, snake);
-    Update();
-    renderer.Render(snake, food);
+    Update(controller);
+
+    {
+      std::unique_lock<std::mutex>(mtx);
+
+      if (releaseModeEffect &&
+          releaseFuture.wait_for(std::chrono::milliseconds(1)) == std::future_status::ready) {
+        releaseFuture.get();
+        releaseModeEffect = false;
+      }
+      if (!gameModeSpawned &&
+          futureGameMode.wait_for(std::chrono::milliseconds(1)) == std::future_status::ready) {
+        gameModeType = futureGameMode.get();
+        futureGameMode = std::async(std::launch::async, [this]() {
+          std::this_thread::sleep_for(std::chrono::milliseconds(2*1000));
+          return setModeGame();
+        });
+      }
+
+      renderer.Render(snake, food, solidBorders);
+    }
 
     frame_end = SDL_GetTicks();
 
@@ -36,7 +62,6 @@ void Game::Run(Controller const &controller, Renderer &renderer,
 
     // After every second, update the window title.
     if (frame_end - title_timestamp >= 1000) {
-      renderer.UpdateWindowTitle(score, frame_count);
       frame_count = 0;
       title_timestamp = frame_end;
     }
@@ -52,6 +77,8 @@ void Game::Run(Controller const &controller, Renderer &renderer,
 
 void Game::PlaceFood() {
   int x, y;
+  std::unique_lock<std::mutex>(mtx);
+
   while (true) {
     x = random_w(engine);
     y = random_h(engine);
@@ -65,8 +92,9 @@ void Game::PlaceFood() {
   }
 }
 
-void Game::Update() {
-  if (!snake.alive) return;
+void Game::Update(Controller &controller) {
+  if (!snake.alive)
+    return;
 
   snake.Update();
 
@@ -80,7 +108,89 @@ void Game::Update() {
     // Grow snake and increase speed.
     snake.GrowBody();
     snake.speed += 0.02;
+
+    if(gameModeSpawned){
+        std::unique_lock<std::mutex>(mtx);
+        UpdateGameMode(controller);
+        renderer.UpdateWindowTitle(score);
+        gameModeSpawned = false;
+    }
   }
+}
+
+
+GameMode Game::setModeGame() {
+  std::unique_lock<std::mutex>(mtx);
+  int x, y;
+
+  gameModeSpawned = true;
+  return static_cast<GameMode>(gameModeSpawn(engine));
+}
+
+void Game::UpdateGameMode(Controller &controller) {
+
+  switch (gameModeType) {
+  case GameMode::speedUp:
+    snake.speed = 1.5 * snake.speed;
+    // launch delayed action to undo effect
+    releaseFuture = std::async(std::launch::async, [this]() {
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(1000 * GAME_MODE_REMAINS));
+      {
+        std::unique_lock<std::mutex>(mtx);
+        snake.speed = snake.speed / 1.5;
+      }
+      return;
+    });
+    releaseModeEffect = true;
+    break;
+  case GameMode::speedDown:
+    snake.speed = 0.5 * snake.speed;
+
+    // launch delayed action to undo effect
+    releaseFuture = std::async(std::launch::async, [this]() {
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(1000 * GAME_MODE_REMAINS));
+      {
+        std::unique_lock<std::mutex>(mtx);
+        snake.speed = snake.speed / 0.5;
+      }
+      return;
+    });
+    releaseModeEffect = true;
+    break;
+  case GameMode::invertedControls:
+    controller.setInvertControl(true);
+    // launch delayed action to undo effect
+    releaseFuture = std::async(std::launch::async, [this, &controller]() {
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(1000 * GAME_MODE_REMAINS));
+      {
+        std::unique_lock<std::mutex>(mtx);
+        controller.setInvertControl(false);
+      }
+      return;
+    });
+    releaseModeEffect = true;
+    break;
+  case GameMode::solidBorders:
+    snake.setSolidBorders(true);
+    solidBorders = true;
+    // launch delayed action to undo effect
+    releaseFuture = std::async(std::launch::async, [this]() {
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(1000 * GAME_MODE_REMAINS));
+      {
+        std::unique_lock<std::mutex>(mtx);
+        snake.setSolidBorders(false);
+      }
+      solidBorders = false;
+      releaseModeEffect = true;
+    });
+    break;
+  default:
+    break;
+  };
 }
 
 int Game::GetScore() const { return score; }

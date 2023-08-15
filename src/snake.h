@@ -18,7 +18,8 @@ class Snake {
 
   void GrowBody();
   bool SnakeCell(int x, int y);
-
+  void setSolidBorders(const bool solidborder) { solidBorders = solidborder; }
+  
   Direction direction = Direction::kUp;
 
   float speed{0.1f};
@@ -35,6 +36,7 @@ class Snake {
   bool growing{false};
   int grid_width;
   int grid_height;
+  bool solidBorders{false};
 };
 
 #endif

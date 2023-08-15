@@ -39,8 +39,17 @@ void Snake::UpdateHead() {
   }
 
   // Wrap the Snake around to the beginning if going off of the screen.
-  head_x = fmod(head_x + grid_width, grid_width);
-  head_y = fmod(head_y + grid_height, grid_height);
+  if (!solidBorders) {
+    head_x = fmod(head_x + grid_width, grid_width);
+    head_y = fmod(head_y + grid_height, grid_height);
+  } else {
+    if (static_cast<int>(head_x) < 0 ||
+        static_cast<int>(head_x) > grid_width - 1 ||
+        static_cast<int>(head_y) < 0 ||
+        static_cast<int>(head_y) > grid_height - 1) {
+      alive = false;
+    }
+  }
 }
 
 void Snake::UpdateBody(SDL_Point &current_head_cell, SDL_Point &prev_head_cell) {
@@ -60,7 +69,7 @@ void Snake::UpdateBody(SDL_Point &current_head_cell, SDL_Point &prev_head_cell) 
     if (current_head_cell.x == item.x && current_head_cell.y == item.y) {
       alive = false;
     }
-  }
+  }  
 }
 
 void Snake::GrowBody() { growing = true; }
