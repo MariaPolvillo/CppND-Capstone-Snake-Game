@@ -29,11 +29,18 @@ This is a modification of the starter repo for the Capstone project in the [Udac
 ## Overview of The Code Structure and Added functionalities
 This code follows the same structure described in the Capstone project. The Snake game code consists of four main classes: Game, Snake, Controller, and Renderer. Main creates a Controller, a Game, which stores a Snake object as part of the state, and a Renderer object. Main calls Game::Run to start the game main loop where Controller::HandleInput, Game::Update and Render::Render are called inside a while loop in order to run and bring this game to life.
 
-The new functionalities added to this project have been to add new mode games to the basic one. Each time the snake feeds, the mode of the game is randomly set to a different one. The game will remain in the new mode until a time delay is reached, after that the game will switch to the basic game mode. There are four different new game modes:
-  1. Speed Up Mode: the speed of the snake is multiplied by 1.5.
-  2. Speed Down Mode: the speed of the snake is divideb by 0.5.
-  3. Inverted Control Mode: in this mode, the controls are inverted so up control would be down and viceversa, and left would be right control and viceversa.
-  4. Solid Boder Mode: the snake can not go off the screen window.
+New functionalities have been added to the capstone project. The objective of the game is still the same, the snake must eat the maximum amount of food as possible to get the maximum score. In this modified game, the snake can eat two different type of foods: the classic ones, in this case the score will be arised one point. and a new special one, that will arise the score in two points. The 
+
+Each time the snake eats a special food, the game mode will be randomly switched between four different Game Modes: 
+  1. Speed Up Mode: the speed of the snake is multiplied by 1.5 (poison food).
+  2. Speed Down Mode: the speed of the snake is divideb by 0.5 (good food).
+  3. Inverted Control Mode: in this mode, the controls are inverted so up control would be down and viceversa, and left would be right control and viceversa  (poison food).
+  4. Solid Boder Mode: the snake can not go off the screen window  (poison food).
+
+The Mode Game will remain in the Game Mode for three seconds, after that the game will switch to the basic game mode. The game will end when the snake crashes with a solid border or with its own body. 
+
+P.S: The appearance of the two type of food is the same, so the player should be careful what food he gives to his snake :P Good luck and enjoy the game!
+
 
 # Rubric satisfied
 - All related README rubric points are addressed in the project.

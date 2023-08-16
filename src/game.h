@@ -9,7 +9,7 @@
 #include <future>
 #include <mutex>
 
-#define GAME_MODE_REMAINS 3
+#define TIME_GAME_MODE_REMAINS 3
 
 enum GameMode : unsigned int {
   speedUp = 0,
@@ -29,7 +29,8 @@ class Game {
 
  private:
   Snake snake;
-  SDL_Point food;  
+  SDL_Point food;
+  SDL_Point specialFood;
 
   std::mutex mtx;
   std::future<GameMode> futureGameMode;
@@ -48,7 +49,8 @@ class Game {
   Renderer renderer;
 
   void PlaceFood();
-  GameMode setModeGame();
+  GameMode generateSpectialFoodAndSetModeGame();
+  GameMode setNewModeGame();
   void Update(Controller &controller);
   void UpdateGameMode(Controller &controller);
 
